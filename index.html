@@ -4,14 +4,144 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JW Board Clone</title>
-  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #f1f1f1;
+    }
+    header {
+      background-color: #0055a5;
+      color: white;
+      padding: 1em;
+      text-align: center;
+    }
+    main {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 1em;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .announcement {
+      border-left: 5px solid #0055a5;
+      padding: 1em;
+      margin-bottom: 1em;
+      background-color: #f9f9f9;
+      position: relative;
+    }
+    .announcement h3 {
+      margin-top: 0;
+    }
+    .delete-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: #c62828;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 0.9em;
+    }
+    #adminForm {
+      display: none;
+      margin-bottom: 1em;
+    }
+    #adminForm input, #adminForm button {
+      margin-right: 10px;
+      padding: 5px;
+    }
+  </style>
 </head>
 <body>
   <header>
     <h1>Tablón de Anuncios</h1>
   </header>
-  <main id="board"></main>
+  <main>
+    <div id="adminLogin">
+      <input type="text" id="username" placeholder="Enter admin username">
+      <button onclick="login()">Login</button>
+    </div>
 
-  <script src="script.js"></script>
+    <div id="adminForm">
+      <input type="text" id="newTitle" placeholder="New Title">
+      <input type="text" id="newContent" placeholder="New Content">
+      <button onclick="addAnnouncement()">Add Announcement</button>
+    </div>
+
+    <div id="board"></div>
+  </main>
+
+  <script>
+    const ADMIN_USERNAME = "admin";
+    let isAdmin = false;
+    const announcements = [
+      {
+        title: "Reunión de Servicio",
+        content: "El sábado a las 9am tendremos reunión especial para el servicio."
+      },
+      {
+        title: "Limpieza del Salón",
+        content: "Este domingo después de la reunión, todos los grupos están invitados a participar."
+      },
+      {
+        title: "Escuela del Ministerio",
+        content: "Los estudiantes nuevos pueden acercarse al coordinador para más información."
+      }
+    ];
+
+    function renderBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+      announcements.forEach(({ title, content }, index) => {
+        const div = document.createElement('div');
+        div.className = 'announcement';
+        div.innerHTML = `<h3>${title}</h3><p>${content}</p>`;
+        if (isAdmin) {
+          const deleteBtn = document.createElement('button');
+          deleteBtn.textContent = 'Eliminar';
+          deleteBtn.className = 'delete-btn';
+          deleteBtn.onclick = () => deleteAnnouncement(index);
+          div.appendChild(deleteBtn);
+        }
+        board.appendChild(div);
+      });
+    }
+
+    function login() {
+      const username = document.getElementById('username').value;
+      if (username === ADMIN_USERNAME) {
+        isAdmin = true;
+        document.getElementById('adminForm').style.display = 'block';
+        document.getElementById('adminLogin').style.display = 'none';
+        renderBoard();
+      } else {
+        alert('Access denied.');
+      }
+    }
+
+    function addAnnouncement() {
+      const newTitle = document.getElementById('newTitle').value.trim();
+      const newContent = document.getElementById('newContent').value.trim();
+      if (newTitle && newContent) {
+        announcements.unshift({ title: newTitle, content: newContent });
+        renderBoard();
+        document.getElementById('newTitle').value = '';
+        document.getElementById('newContent').value = '';
+      }
+    }
+
+    function deleteAnnouncement(index) {
+      if (confirm("¿Estás seguro de que deseas eliminar este anuncio?")) {
+        announcements.splice(index, 1);
+        renderBoard();
+      }
+    }
+
+    window.onload = renderBoard;
+  </script>
 </body>
 </html>
