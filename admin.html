@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>JW Board Admin</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }
+    .announcement {
+      border-left: 5px solid #0055a5;
+      background: #f9f9f9;
+      margin-bottom: 1em;
+      padding: 1em;
+      position: relative;
+    }
+    .announcement button {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      background: #c62828;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    #adminControls { margin-bottom: 20px; }
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+  <h1>Admin Panel</h1>
+
+  <div id="loginDiv">
+    <input id="email" type="email" placeholder="Admin email" />
+    <input id="password" type="password" placeholder="Password" />
+    <button id="loginBtn">Login</button>
+  </div>
+
+  <div id="adminControls" style="display:none;">
+    <input id="titleInput" placeholder="Announcement title" />
+    <input id="contentInput" placeholder="Announcement content" />
+    <button id="addBtn">Add Announcement</button>
+    <button id="logoutBtn">Logout</button>
+    <div id="board"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDJOuwebgrENgfgUrkziFnnNIwvh4PRq9Q",
+      authDomain: "jwboard-2a83a.firebaseapp.com",
+      databaseURL: "https://jwboard-2a83a-default-rtdb.firebaseio.com",
+      projectId: "jwboard-2a83a",
+      storageBucket: "jwboard-2a83a.appspot.com",
+      messagingSenderId: "221707565673",
+      appId: "1:221707565673:web:57309faa326e8508d840f8"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const loginDiv = document.getElementById('loginDiv');
+    const adminControls = document.getElementById('adminControls');
+    const board = document.getElementById('board');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const addBtn = document.getElementById('addBtn');
+
+    function renderAnnouncements(data) {
+      board.innerHTML = '';
+      for (const key in data) {
+        const ann = data[key];
+        const div = document.createElement('div');
+        div.className = 'announcement';
+
+        const h3 = document.createElement('h3');
+        h3.textContent = ann.title;
+        const p = document.createElement('p');
+        p.textContent = ann.content;
+
+        div.appendChild(h3);
+        div.appendChild(p);
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Eliminar';
+        delBtn.onclick = () => deleteAnnouncement(key);
+        div.appendChild(delBtn);
+
+        board.appendChild(div);
+      }
+    }
+
+    function deleteAnnouncement(key) {
+      if (confirm('¿Estás seguro de eliminar este anuncio?')) {
+        db.ref('announcements/' + key).remove();
+      }
+    }
+
+    function addAnnouncement() {
+      const title = document.getElementById('titleInput').value.trim();
+      const content = document.getElementById('contentInput').value.trim();
+      if (!title || !content) {
+        alert('Por favor, complete todos los campos.');
+        return;
+      }
+      db.ref('announcements').push({ title, content });
+      document.getElementById('titleInput').value = '';
+      document.getElementById('contentInput').value = '';
+    }
+
+    loginBtn.onclick = () => {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      auth.signInWithEmailAndPassword(email, password)
+        .catch(e => alert(e.message));
+    };
+
+    logoutBtn.onclick = () => {
+      auth.signOut();
+    };
+
+    addBtn.onclick = addAnnouncement;
+
+    firebase.database().ref('announcements').on('value', snapshot => {
+      const data = snapshot.val() || {};
+      renderAnnouncements(data);
+    });
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginDiv.style.display = 'none';
+        adminControls.style.display = 'block';
+      } else {
+        loginDiv.style.display = 'block';
+        adminControls.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
