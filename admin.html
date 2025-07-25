@@ -1,11 +1,9 @@
-<!--
-  Paste this entire code into CodePen's HTML pane.
-  In CodePen settings > JS, add these Firebase libs:
-  1. https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js
-  2. https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js
-  3. https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js
--->
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin Panel - Congregación Valencia</title>
 <style>
   body {
     font-family: sans-serif;
@@ -14,7 +12,7 @@
     padding: 2rem;
     background: #fffbe6;
   }
-  h1 {
+  h1, h2 {
     color: #b58900;
     text-align: center;
   }
@@ -42,8 +40,28 @@
     margin-bottom: 20px;
     background-color: #a67c00;
   }
+  .announcement-card {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    background: #fffbe6;
+  }
+  .announcement-card img {
+    max-width: 150px;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .announcement-card button {
+    background: #b58900;
+    margin-top: 10px;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
 </style>
-
+</head>
+<body>
 <h1>Admin Panel - Congregación Valencia</h1>
 
 <div id="loginDiv">
@@ -70,6 +88,9 @@
     <button type="submit">Upload Announcement</button>
   </form>
   <div id="status"></div>
+
+  <h2>Existing Announcements</h2>
+  <div id="announcementsContainer"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
@@ -90,7 +111,6 @@
   const cloudName = "dgx8qpq0x";
   const uploadPreset = "unsigned_upload";
 
-  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
@@ -103,17 +123,21 @@
   const announcementForm = document.getElementById("announcementForm");
   const statusDiv = document.getElementById("status");
   const loginStatusDiv = document.getElementById("loginStatus");
+  const announcementsContainer = document.getElementById("announcementsContainer");
 
-  // Auth state listener
+  // Listen for auth state
   auth.onAuthStateChanged(user => {
     if (user) {
       loginDiv.style.display = "none";
       uploadDiv.style.display = "block";
       loginStatusDiv.textContent = "";
+      loadAndRenderAnnouncements();
     } else {
       loginDiv.style.display = "block";
       uploadDiv.style.display = "none";
+      loginStatusDiv.textContent = "";
       statusDiv.textContent = "";
+      announcementsContainer.innerHTML = "";
     }
   });
 
@@ -126,6 +150,7 @@
     try {
       await auth.signInWithEmailAndPassword(email, password);
       loginStatusDiv.textContent = "Logged in!";
+      loginForm.reset();
     } catch (error) {
       loginStatusDiv.textContent = `Login failed: ${error.message}`;
     }
@@ -136,7 +161,7 @@
     auth.signOut();
   });
 
-  // Announcement upload
+  // Upload announcement
   announcementForm.addEventListener("submit", async e => {
     e.preventDefault();
     statusDiv.textContent = "";
@@ -179,10 +204,83 @@
 
       statusDiv.textContent = "Announcement uploaded successfully!";
       announcementForm.reset();
+      loadAndRenderAnnouncements(); // Refresh list after upload
     } catch (err) {
       statusDiv.textContent = `Upload failed: ${err.message}`;
       console.error(err);
     }
   });
+
+  // Load and display announcements with delete buttons
+  async function loadAndRenderAnnouncements() {
+    announcementsContainer.innerHTML = "<p>Loading announcements...</p>";
+    try {
+      const snapshot = await db.collection("announcements").orderBy("timestamp", "desc").get();
+
+      if (snapshot.empty) {
+        announcementsContainer.innerHTML = "<p>No announcements yet.</p>";
+        return;
+      }
+
+      announcementsContainer.innerHTML = "";
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const docId = doc.id;
+
+        const card = document.createElement("div");
+        card.className = "announcement-card";
+
+        const titleEl = document.createElement("h3");
+        titleEl.textContent = data.title || "(No title)";
+        card.appendChild(titleEl);
+
+        if (data.description) {
+          const descEl = document.createElement("p");
+          descEl.textContent = data.description;
+          card.appendChild(descEl);
+        }
+
+        if (data.fileUrl) {
+          if (/\.(jpg|jpeg|png|gif|webp)$/i.test(data.fileUrl)) {
+            const img = document.createElement("img");
+            img.src = data.fileUrl;
+            img.alt = data.title || "Announcement image";
+            card.appendChild(img);
+          } else {
+            const link = document.createElement("a");
+            link.href = data.fileUrl;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.textContent = "View Document";
+            card.appendChild(link);
+          }
+        }
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "Delete";
+        deleteBtn.addEventListener("click", async () => {
+          if (confirm(`Are you sure you want to delete "${data.title}"? This action cannot be undone.`)) {
+            try {
+              await db.collection("announcements").doc(docId).delete();
+              alert("Announcement deleted.");
+              loadAndRenderAnnouncements();
+            } catch (err) {
+              alert("Failed to delete: " + err.message);
+            }
+          }
+        });
+        card.appendChild(deleteBtn);
+
+        announcementsContainer.appendChild(card);
+      });
+    } catch (error) {
+      announcementsContainer.innerHTML = `<p style="color:red;">Failed to load announcements: ${error.message}</p>`;
+      console.error(error);
+    }
+  }
 </script>
+</body>
+</html>
+
 
