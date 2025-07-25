@@ -2,49 +2,36 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>JW Board Public</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }
-    .announcement {
-      border-left: 5px solid #0055a5;
-      background: #f9f9f9;
-      margin-bottom: 1em;
-      padding: 1em;
-    }
-  </style>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <title>Congregación Valencia - Announcements</title>
+  <link rel="stylesheet" href="index.css" />
 </head>
 <body>
-  <h1>Tablón de Anuncios</h1>
-  <div id="board"></div>
+  <header>
+    Congregación Valencia
+  </header>
+  <div class="container">
+    <main id="board" class="board">
+      <!-- Announcement cards injected here -->
+    </main>
+  </div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDJOuwebgrENgfgUrkziFnnNIwvh4PRq9Q",
-      authDomain: "jwboard-2a83a.firebaseapp.com",
-      databaseURL: "https://jwboard-2a83a-default-rtdb.firebaseio.com",
-      projectId: "jwboard-2a83a",
-      storageBucket: "jwboard-2a83a.appspot.com",
-      messagingSenderId: "221707565673",
-      appId: "1:221707565673:web:57309faa326e8508d840f8"
-    };
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const board = document.getElementById('board');
+  <script src="index.js"></script>
 
-    firebase.database().ref('announcements').on('value', snapshot => {
-      const data = snapshot.val() || {};
-      board.innerHTML = '';
-      for (const key in data) {
-        const ann = data[key];
-        const div = document.createElement('div');
-        div.className = 'announcement';
-        div.innerHTML = `<h3>${ann.title}</h3><p>${ann.content}</p>`;
-        board.appendChild(div);
-      }
-    });
-  </script>
+  <!-- Lightbox preview -->
+  <div id="lightbox" style="
+    display:none;
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.8);
+    justify-content:center;
+    align-items:center;
+    z-index:1000;
+  ">
+    <img id="lightbox-img" src="" alt="Preview" style="max-width:90%; max-height:90%; border-radius:8px; box-shadow:0 0 20px #000" />
+  </div>
 </body>
 </html>
