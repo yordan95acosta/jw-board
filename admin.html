@@ -1,145 +1,188 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>JW Board Admin</title>
-  <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; }
-    .announcement {
-      border-left: 5px solid #0055a5;
-      background: #f9f9f9;
-      margin-bottom: 1em;
-      padding: 1em;
-      position: relative;
+<!--
+  Paste this entire code into CodePen's HTML pane.
+  In CodePen settings > JS, add these Firebase libs:
+  1. https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js
+  2. https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js
+  3. https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js
+-->
+
+<style>
+  body {
+    font-family: sans-serif;
+    max-width: 600px;
+    margin: auto;
+    padding: 2rem;
+    background: #fffbe6;
+  }
+  h1 {
+    color: #b58900;
+    text-align: center;
+  }
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  input, textarea, button {
+    padding: 8px;
+    font-size: 1rem;
+  }
+  button {
+    background-color: #b58900;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  #status, #loginStatus {
+    margin-top: 1rem;
+    font-weight: bold;
+    text-align: center;
+  }
+  #logoutBtn {
+    margin-bottom: 20px;
+    background-color: #a67c00;
+  }
+</style>
+
+<h1>Admin Panel - Congregación Valencia</h1>
+
+<div id="loginDiv">
+  <h2>Please Log In</h2>
+  <form id="loginForm">
+    <label>Email:</label>
+    <input type="email" id="loginEmail" required />
+    <label>Password:</label>
+    <input type="password" id="loginPassword" required />
+    <button type="submit">Login</button>
+  </form>
+  <div id="loginStatus"></div>
+</div>
+
+<div id="uploadDiv" style="display:none;">
+  <button id="logoutBtn">Logout</button>
+  <form id="announcementForm">
+    <label>Title:</label>
+    <input type="text" id="title" required />
+    <label>Description:</label>
+    <textarea id="description"></textarea>
+    <label>File (PDF or Image):</label>
+    <input type="file" id="fileInput" accept=".pdf,image/*" required />
+    <button type="submit">Upload Announcement</button>
+  </form>
+  <div id="status"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+<script>
+  // Your Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyDJOuwebgrENgfgUrkziFnnNIwvh4PRq9Q",
+    authDomain: "jwboard-2a83a.firebaseapp.com",
+    projectId: "jwboard-2a83a",
+    storageBucket: "jwboard-2a83a.appspot.com",
+    messagingSenderId: "221707565673",
+    appId: "1:221707565673:web:57309faa326e8508d840f8"
+  };
+
+  const cloudName = "dgx8qpq0x";
+  const uploadPreset = "unsigned_upload";
+
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // Elements
+  const loginDiv = document.getElementById("loginDiv");
+  const uploadDiv = document.getElementById("uploadDiv");
+  const loginForm = document.getElementById("loginForm");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const announcementForm = document.getElementById("announcementForm");
+  const statusDiv = document.getElementById("status");
+  const loginStatusDiv = document.getElementById("loginStatus");
+
+  // Auth state listener
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      loginDiv.style.display = "none";
+      uploadDiv.style.display = "block";
+      loginStatusDiv.textContent = "";
+    } else {
+      loginDiv.style.display = "block";
+      uploadDiv.style.display = "none";
+      statusDiv.textContent = "";
     }
-    .announcement button {
-      position: absolute;
-      right: 10px;
-      top: 10px;
-      background: #c62828;
-      color: white;
-      border: none;
-      padding: 5px 10px;
-      cursor: pointer;
-      border-radius: 4px;
+  });
+
+  // Login form submit
+  loginForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    loginStatusDiv.textContent = "Logging in...";
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value;
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+      loginStatusDiv.textContent = "Logged in!";
+    } catch (error) {
+      loginStatusDiv.textContent = `Login failed: ${error.message}`;
     }
-    #adminControls { margin-bottom: 20px; }
-  </style>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-</head>
-<body>
+  });
 
-  <h1>Admin Panel</h1>
+  // Logout button
+  logoutBtn.addEventListener("click", () => {
+    auth.signOut();
+  });
 
-  <div id="loginDiv">
-    <input id="email" type="email" placeholder="Admin email" />
-    <input id="password" type="password" placeholder="Password" />
-    <button id="loginBtn">Login</button>
-  </div>
+  // Announcement upload
+  announcementForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    statusDiv.textContent = "";
 
-  <div id="adminControls" style="display:none;">
-    <input id="titleInput" placeholder="Announcement title" />
-    <input id="contentInput" placeholder="Announcement content" />
-    <button id="addBtn">Add Announcement</button>
-    <button id="logoutBtn">Logout</button>
-    <div id="board"></div>
-  </div>
+    const title = document.getElementById("title").value.trim();
+    const description = document.getElementById("description").value.trim();
+    const fileInput = document.getElementById("fileInput");
+    const file = fileInput.files[0];
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDJOuwebgrENgfgUrkziFnnNIwvh4PRq9Q",
-      authDomain: "jwboard-2a83a.firebaseapp.com",
-      databaseURL: "https://jwboard-2a83a-default-rtdb.firebaseio.com",
-      projectId: "jwboard-2a83a",
-      storageBucket: "jwboard-2a83a.appspot.com",
-      messagingSenderId: "221707565673",
-      appId: "1:221707565673:web:57309faa326e8508d840f8"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
-
-    const loginDiv = document.getElementById('loginDiv');
-    const adminControls = document.getElementById('adminControls');
-    const board = document.getElementById('board');
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    const loginBtn = document.getElementById('loginBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const addBtn = document.getElementById('addBtn');
-
-    function renderAnnouncements(data) {
-      board.innerHTML = '';
-      for (const key in data) {
-        const ann = data[key];
-        const div = document.createElement('div');
-        div.className = 'announcement';
-
-        const h3 = document.createElement('h3');
-        h3.textContent = ann.title;
-        const p = document.createElement('p');
-        p.textContent = ann.content;
-
-        div.appendChild(h3);
-        div.appendChild(p);
-
-        const delBtn = document.createElement('button');
-        delBtn.textContent = 'Eliminar';
-        delBtn.onclick = () => deleteAnnouncement(key);
-        div.appendChild(delBtn);
-
-        board.appendChild(div);
-      }
+    if (!file) {
+      statusDiv.textContent = "Please select a file.";
+      return;
     }
 
-    function deleteAnnouncement(key) {
-      if (confirm('¿Estás seguro de eliminar este anuncio?')) {
-        db.ref('announcements/' + key).remove();
-      }
+    statusDiv.textContent = "Uploading file to Cloudinary...";
+
+    try {
+      // Upload to Cloudinary
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", uploadPreset);
+
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (!data.secure_url) throw new Error("Cloudinary upload failed.");
+
+      // Save to Firestore
+      await db.collection("announcements").add({
+        title,
+        description,
+        fileUrl: data.secure_url,
+        fileName: file.name,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      statusDiv.textContent = "Announcement uploaded successfully!";
+      announcementForm.reset();
+    } catch (err) {
+      statusDiv.textContent = `Upload failed: ${err.message}`;
+      console.error(err);
     }
+  });
+</script>
 
-    function addAnnouncement() {
-      const title = document.getElementById('titleInput').value.trim();
-      const content = document.getElementById('contentInput').value.trim();
-      if (!title || !content) {
-        alert('Por favor, complete todos los campos.');
-        return;
-      }
-      db.ref('announcements').push({ title, content });
-      document.getElementById('titleInput').value = '';
-      document.getElementById('contentInput').value = '';
-    }
-
-    loginBtn.onclick = () => {
-      const email = emailInput.value;
-      const password = passwordInput.value;
-      auth.signInWithEmailAndPassword(email, password)
-        .catch(e => alert(e.message));
-    };
-
-    logoutBtn.onclick = () => {
-      auth.signOut();
-    };
-
-    addBtn.onclick = addAnnouncement;
-
-    firebase.database().ref('announcements').on('value', snapshot => {
-      const data = snapshot.val() || {};
-      renderAnnouncements(data);
-    });
-
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        loginDiv.style.display = 'none';
-        adminControls.style.display = 'block';
-      } else {
-        loginDiv.style.display = 'block';
-        adminControls.style.display = 'none';
-      }
-    });
-  </script>
-</body>
-</html>
